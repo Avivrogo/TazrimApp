@@ -779,7 +779,7 @@ def render_add_fixed():
 
 def main():
     st.set_page_config(
-        page_title="מעקב הוצאות",
+        page_title="מעעעעקב הוצאות",
         page_icon="💰",
         layout="centered",
         initial_sidebar_state="collapsed"
