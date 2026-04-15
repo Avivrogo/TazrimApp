@@ -427,127 +427,7 @@ def render_main_screen():
             st.session_state.current_screen = "more_menu"
             st.rerun()
 
-def render_add_expense():
-    """מסך הוספת הוצאה - גרסה מהירה: סכום ואז פרטים"""
-    settings = load_settings()
-    categories = settings.get("categories", [])
-    step = st.session_state.get("add_expense_step", 1)
-    
-    # כפתור חזרה
-    if st.button("→ חזרה", key="back_add"):
-        if step > 1:
-            st.session_state.add_expense_step = 1
-            st.rerun()
-        else:
-            st.session_state.current_screen = "main"
-            reset_expense_flow()
-            st.rerun()
 
-    # שלב 1: המקלדת הנומרית (כמו בטלפון)
-    if step == 1:
-        st.markdown('<div class="page-title">💰 הזן סכום</div>', unsafe_allow_html=True)
-        
-        amount_str = st.session_state.amount_input
-        display_amount = amount_str if amount_str else "0"
-        st.markdown(f'<div class="amount-display">₪{display_amount}</div>', unsafe_allow_html=True)
-        
-        # בניית המקלדת ב-3 עמודות
-        keys = [
-            ["1", "2", "3"],
-            ["4", "5", "6"],
-            ["7", "8", "9"],
-            [".", "0", "⌫"]
-        ]
-        
-        for row in keys:
-            cols = st.columns(3)
-            for i, num in enumerate(row):
-                with cols[i]:
-                    if st.button(num, key=f"btn_{num}", use_container_width=True):
-                        if num == "⌫":
-                            st.session_state.amount_input = amount_str[:-1]
-                        elif num == ".":
-                            if "." not in amount_str:
-                                st.session_state.amount_input = amount_str + "."
-                        else:
-                            # מניעת הקלדה של יותר מ-2 ספרות אחרי הנקודה
-                            if "." in amount_str and len(amount_str.split(".")[1]) >= 2:
-                                pass
-                            else:
-                                st.session_state.amount_input = amount_str + num
-                        st.rerun()
-        
-        st.markdown('<div class="spacer"></div>', unsafe_allow_html=True)
-        
-        if st.button("המשך לפרטים ←", key="go_to_details", use_container_width=True, type="primary"):
-            if amount_str and float(amount_str) > 0:
-                st.session_state.expense_data["amount"] = float(amount_str)
-                st.session_state.add_expense_step = 2
-                st.rerun()
-            else:
-                st.error("נא להזין סכום")
-
-    # שלב 2: כל שאר הפרטים במסך אחד
-    elif step == 2:
-        st.markdown('<div class="page-title">📝 פרטי ההוצאה</div>', unsafe_allow_html=True)
-        st.markdown(f'<div style="text-align:center; font-size:1.5rem; margin-bottom:1rem;">סכום: ₪{st.session_state.expense_data["amount"]:,}</div>', unsafe_allow_html=True)
-
-        # א. תאריך
-        st.markdown("### 📅 תאריך")
-        col_date1, col_date2 = st.columns(2)
-        with col_date1:
-            if st.button("היום", key="today", use_container_width=True, 
-                         type="primary" if st.session_state.expense_data.get("date") == date.today() else "secondary"):
-                st.session_state.expense_data["date"] = date.today()
-        with col_date2:
-            if st.button("תאריך אחר", key="other_date", use_container_width=True):
-                st.session_state.show_calendar = not st.session_state.get("show_calendar", False)
-        
-        if st.session_state.get("show_calendar", False):
-            st.session_state.expense_data["date"] = st.date_input("בחר תאריך", value=date.today())
-
-        # ב. אופן תשלום
-        st.markdown("### 💳 אופן תשלום")
-        pay_methods = ["אשראי", "מזומן", "ביט", "ספליט"]
-        cols_pay = st.columns(4)
-        for i, method in enumerate(pay_methods):
-            with cols_pay[i]:
-                is_selected = st.session_state.expense_data.get("payment_method") == method
-                if st.button(method, key=f"pay_{method}", use_container_width=True,
-                             type="primary" if is_selected else "secondary"):
-                    st.session_state.expense_data["payment_method"] = method
-                    st.rerun()
-
-        # ג. קטגוריה
-        st.markdown("### 📁 קטגוריה")
-        selected_cat = st.selectbox("בחר קטגוריה", options=categories, index=0)
-        
-        # ד. תיאור חופשי
-        st.markdown("### ✍️ תיאור")
-        desc = st.text_input("תיאור (אופציונלי)", placeholder="על מה הוצאת?")
-
-        st.markdown("---")
-        
-        # ה. כפתור שמירה
-        if st.button("💾 שמור הוצאה", key="final_save", use_container_width=True, type="primary"):
-            # וודוא שיש אמצעי תשלום
-            if not st.session_state.expense_data.get("payment_method"):
-                st.error("נא לבחור אמצעי תשלום")
-            else:
-                final_date = st.session_state.expense_data.get("date", date.today())
-                expense_to_save = {
-                    "date": final_date.strftime("%Y-%m-%d") if hasattr(final_date, 'strftime') else str(final_date),
-                    "amount": st.session_state.expense_data["amount"],
-                    "payment_method": st.session_state.expense_data["payment_method"],
-                    "category": selected_cat,
-                    "description": desc,
-                    "is_fixed": False
-                }
-                save_expense(expense_to_save)
-                st.success("נשמר בהצלחה! ✅")
-                reset_expense_flow()
-                st.session_state.current_screen = "main"
-                st.rerun()
 
 def render_monthly_details():
     st.markdown('<div class="page-title">📊 פירוט הוצאות חודשי</div>', unsafe_allow_html=True)
@@ -701,6 +581,99 @@ def render_more_menu():
                 st.dataframe(display_df, use_container_width=True, hide_index=True)
     else:
         st.info("אין היסטוריה להצגה")
+
+def render_add_expense():
+    """תהליך הוספת הוצאה מלא - סכום ואז פרטים"""
+    
+    # שלב 1: הזנת סכום (המקלדת הנומרית)
+    if st.session_state.expense_flow_step == "amount":
+        st.markdown('<div class="page-title">💰 הזן סכום</div>', unsafe_allow_html=True)
+        
+        display_val = st.session_state.temp_amount if st.session_state.temp_amount else "0"
+        st.markdown(f'<div class="amount-display">₪{display_val}</div>', unsafe_allow_html=True)
+        
+        # בניית המקלדת ב-3 עמודות
+        keys = [
+            ['1', '2', '3'],
+            ['4', '5', '6'],
+            ['7', '8', '9'],
+            ['.', '0', '⌫']
+        ]
+        
+        for row in keys:
+            cols = st.columns(3)
+            for i, key in enumerate(row):
+                with cols[i]:
+                    if st.button(key, key=f"btn_{key}_{row[0]}", use_container_width=True):
+                        if key == '⌫':
+                            st.session_state.temp_amount = st.session_state.temp_amount[:-1]
+                        elif key == '.':
+                            # הגבלה: נקודה אחת בלבד
+                            if '.' not in st.session_state.temp_amount:
+                                st.session_state.temp_amount += '.'
+                        else:
+                            # הגבלה: מקסימום 2 ספרות אחרי הנקודה
+                            if '.' in st.session_state.temp_amount:
+                                if len(st.session_state.temp_amount.split('.')[1]) < 2:
+                                    st.session_state.temp_amount += key
+                            else:
+                                st.session_state.temp_amount += key
+                        st.rerun()
+        
+        st.markdown('<div class="spacer"></div>', unsafe_allow_html=True)
+        
+        col_next, col_cancel = st.columns(2)
+        with col_next:
+            if st.button("המשך לפרטים ←", type="primary", use_container_width=True):
+                if st.session_state.temp_amount and float(st.session_state.temp_amount) > 0:
+                    st.session_state.expense_flow_step = "details"
+                    st.rerun()
+                else:
+                    st.error("הזן סכום תקין")
+        with col_cancel:
+            if st.button("ביטול", use_container_width=True):
+                reset_expense_flow()
+                st.session_state.current_screen = "main"
+                st.rerun()
+
+    # שלב 2: הזנת פרטים (תיאור, קטגוריה, אמצעי תשלום)
+    elif st.session_state.expense_flow_step == "details":
+        st.markdown('<div class="page-title">📝 פרטי ההוצאה</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align:center; font-size:1.5rem; margin-bottom:1rem;">סכום: ₪{st.session_state.temp_amount}</div>', unsafe_allow_html=True)
+        
+        settings = load_settings()
+        categories = settings.get("categories", ["כללי"])
+        payment_methods = ["אשראי", "מזומן", "ביט", "העברה", "אחר"]
+        
+        description = st.text_input("תיאור ההוצאה:", placeholder="מה קנית?")
+        category = st.selectbox("קטגוריה:", categories)
+        payment_method = st.selectbox("אמצעי תשלום:", payment_methods)
+        expense_date = st.date_input("תאריך:", datetime.now())
+        
+        col_save, col_back = st.columns(2)
+        with col_save:
+            if st.button("✅ שמירה", type="primary", use_container_width=True):
+                if description:
+                    new_expense = {
+                        "date": expense_date.strftime("%Y-%m-%d"),
+                        "amount": float(st.session_state.temp_amount),
+                        "category": category,
+                        "description": description,
+                        "payment_method": payment_method,
+                        "is_fixed": False
+                    }
+                    save_expense(new_expense)
+                    st.success("ההוצאה נשמרה!")
+                    reset_expense_flow()
+                    st.session_state.current_screen = "main"
+                    st.rerun()
+                else:
+                    st.error("חובה להזין תיאור")
+                    
+        with col_back:
+            if st.button("חזור לסכום", use_container_width=True):
+                st.session_state.expense_flow_step = "amount"
+                st.rerun()
 
 def render_add_fixed():
     """מסך הוספת הוצאה קבועה"""
